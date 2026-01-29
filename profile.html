@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard – UI Only</title>
+<style>
+/* ===== Global ===== */
+body{
+    margin:0;
+    font-family:"Segoe UI",Tahoma,Arial;
+    background:#f2f4f7;
+    display:flex;
+}
+
+/* ===== Sidebar ===== */
+.sidebar{
+    position:fixed;
+    top:0;left:0;
+    width:230px;height:100%;
+    background:#e8f1f8;
+    border-right:1px solid #c3d4e6;
+}
+.sidebar::before{
+    content:"Government Services";
+    display:block;
+    background:#003366;
+    color:#fff;
+    padding:14px 16px;
+    font-weight:600;
+}
+.sidebar a{
+    display:block;
+    padding:12px 18px;
+    color:#003366;
+    text-decoration:none;
+    border-bottom:1px solid #d5e2ee;
+}
+
+/* ===== Main ===== */
+.main{margin-left:230px;width:100%;}
+
+/* ===== Header ===== */
+header{
+    background:linear-gradient(90deg,#ff9933,#ffffff,#138808);
+    border-bottom:3px solid #003366;
+    padding:10px 18px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+.profile-wrapper img{
+    width:38px;height:38px;border-radius:50%;
+    border:2px solid #003366;
+}
+
+/* ===== Poster ===== */
+.poster{
+    max-width:700px;
+    margin:20px auto;
+    background:#fff;
+    border:5px solid #ff9933;
+    border-radius:12px;
+    overflow:hidden;
+}
+.poster .head{
+    background:linear-gradient(180deg,#ff9933,#ffffff,#138808);
+    text-align:center;
+    padding:20px;
+}
+
+.details-grid{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:18px;
+    padding:20px;
+}
+.detail-box{
+    width:100%;max-width:500px;
+    background:#f9fbfd;
+    border:1px solid #c3d4e6;
+    border-radius:8px;
+    padding:18px;
+    text-align:center;
+}
+.detail-box input{
+    width:100%;
+    padding:10px;
+    margin-top:8px;
+    border:1px solid #ccc;
+    border-radius:4px;
+}
+.transfer-btn{
+    margin-top:15px;
+    padding:10px 24px;
+    background:#006600;
+    color:#fff;
+    border:none;
+    border-radius:6px;
+    font-size:17px;
+}
+
+/* ===== Footer ===== */
+.gov-footer{
+    background:#003366;
+    color:#fff;
+    text-align:center;
+    padding:20px;
+    font-size:13px;
+    border-top:4px solid #ff9933;
+}
+.sidebar a#logoutSidebar {
+    color: #ff3333;
+    font-weight: 600;
+}
+.sidebar a#logoutSidebar:hover {
+    background: #ffe6e6;
+}
+
+.gov-footer a{color:#ffcc00;text-decoration:none;}
+</style>
+</head>
+<body>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAPSLZU2rGmBTjugMGXzLHpznOaRUW3i4k",
+  authDomain: "betikalyanyojnaind.firebaseapp.com",
+  projectId: "betikalyanyojnaind",
+  storageBucket: "betikalyanyojnaind.firebasestorage.app",
+  messagingSenderId: "646974816722",
+  appId: "1:646974816722:web:6b0c9c8960d1846a8e480b"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// Check if user is logged in
+auth.onAuthStateChanged(user => {
+    if (!user) {
+        // Not logged in → redirect to login page
+        window.location.href = "login.html";
+    } else {
+        // Logged in → load user data
+        const aadhaar = user.email.split("@")[0]; // extract Aadhaar
+        db.collection("users").doc(aadhaar).get().then(doc => {
+            if(doc.exists){
+                document.querySelector('input[placeholder="Applicant Name"]').value = doc.data().name;
+                document.querySelector('input[placeholder="Aadhaar Number"]').value = doc.data().aadhaar;
+                document.querySelector('input[placeholder="₹0"]').value = "₹" + (doc.data().amountReceived || 0);
+            }
+        });
+    }
+});
+</script>
+
+
+<div class="sidebar">
+    <a href="#">डैशबोर्ड</a>
+    <a href="#">आवेदक का विवरण</a>
+    <a href="#">सक्रिय करे</a>
+    <a href="refferal.html">रेफरल</a>
+    <a href="#">सपोर्ट</a>
+    <a href="#" id="logoutSidebar">लॉग आउट</a>
+</div>
+
+<div class="main">
+<header>
+    <h3>बेटी जीवन कल्याण योजना</h3>
+    <div class="profile-wrapper">
+        <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png">
+    </div>
+</header>
+
+<div class="poster">
+    <div class="head">
+        <h1>बेटी जीवन कल्याण योजना</h1>
+        <p>बेटी का भविष्य सुरक्षित करें</p>
+    </div>
+
+    <div class="details-grid">
+        <div class="detail-box">
+            <span>नाम</span>
+            <input type="text" placeholder="Applicant Name" readonly>
+        </div>
+        <div class="detail-box">
+            <span>आधार</span>
+            <input type="text" placeholder="Aadhaar Number" readonly>
+        </div>
+        <div class="detail-box">
+            <span>प्राप्त सहयोग राशि</span>
+            <input type="text" placeholder="₹0" readonly>
+        </div>
+        <div class="detail-box">
+            <span>ट्रांसफर राशि</span>
+            <input type="text" placeholder="राशि दर्ज करें">
+            <button class="transfer-btn">ट्रांसफर करें</button>
+        </div>
+    </div>
+    <script>
+// Logout from sidebar
+document.getElementById("logoutSidebar").addEventListener("click", function(e){
+    e.preventDefault(); // prevent default link behavior
+    auth.signOut().then(() => {
+        window.location.href = "index.html";
+    });
+});
+</script>
+
+
+
+    <footer class="gov-footer">
+        <p>सहायता ईमेल : <a href="#">helpdesk@betijivankalyan.gov.in</a></p>
+        <p>© 2026 सभी अधिकार सुरक्षित</p>
+    </footer>
+</div>
+</div>
+
+</body>
+</html>

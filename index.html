@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<title>बाल जीवन कल्याण योजना</title>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:"Noto Sans Devanagari","Mangal",Arial,sans-serif;}
+body{ background:#eef2f5; }
+.header{ background:linear-gradient(90deg,#ff9933,#ffffff,#138808); padding:14px 10px 12px; text-align:center; border-bottom:4px solid #1a3c8b; }
+.chakra{ width:46px; height:46px; margin:0 auto 6px; border:3px solid #1a3c8b; border-radius:50%; position:relative; }
+.chakra::after{ content:""; position:absolute; top:50%; left:50%; width:5px; height:5px; background:#1a3c8b; border-radius:50%; transform:translate(-50%,-50%); }
+.chakra span{ position:absolute; width:2px; height:22px; background:#1a3c8b; top:1px; left:50%; transform-origin:bottom center; }
+.header h1{ font-size:36px; font-weight:700; }
+.header p{ font-size:13px; margin-top:2px; }
+.container{ max-width:420px; margin:18px auto; background:#fff; border-radius:10px; box-shadow:0 8px 20px rgba(0,0,0,.15); padding:18px; }
+.section-title{ text-align:center; font-size:18px; font-weight:700; margin-bottom:16px; color:#1a3c8b; }
+.menu{ display:flex; gap:12px; margin-bottom:14px; }
+.menu button{ flex:1; padding:10px; font-size:15px; font-weight:600; border-radius:6px; cursor:pointer; }
+.menu button.active{ background:#1a3c8b; color:#fff; border:none; }
+.menu button:not(.active){ background:#fff; border:2px solid #1a3c8b; color:#1a3c8b; }
+input{ width:100%; padding:12px; margin-bottom:12px; border-radius:6px; border:1px solid #cfd6df; font-size:14px; }
+button.main{ width:100%; padding:12px; background:#1a3c8b; color:#fff; border:none; border-radius:6px; font-size:16px; font-weight:600; cursor:pointer; }
+.msg{ margin-top:10px; font-size:14px; display:none; }
+#registerForm,#loginForm{display:none;}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+    <div class="chakra"></div>
+    <h1>बाल जीवन कल्याण योजना</h1>
+    <p>डिजिटल सूचना एवं आवेदन सहायक पोर्टल</p>
+</div>
+
+<div class="container">
+    <div class="section-title">ऑनलाइन आवेदन / लॉगिन</div>
+
+    <div class="menu">
+        <button id="regBtn" class="active" onclick="showRegister()">रजिस्टर करें</button>
+        <button id="logBtn" onclick="showLogin()">लॉगिन करें</button>
+    </div>
+
+    <div id="registerForm">
+        <input id="name" placeholder="आवेदक का नाम">
+        <input id="aadhaar" placeholder="आधार नंबर (12 अंक)" maxlength="12">
+        <input id="mobile" placeholder="मोबाइल नंबर (10 अंक)" maxlength="10">
+        <input id="password" type="password" placeholder="पासवर्ड (कम से कम 6 अक्षर)">
+        <input id="referral" placeholder="रेफरल कोड (वैकल्पिक)">
+        <button class="main" onclick="registerUser()">रजिस्टर करें</button>
+    </div>
+
+    <div id="loginForm">
+        <input id="loginUser" placeholder="आधार नंबर">
+        <input id="loginPass" type="password" placeholder="पासवर्ड">
+        <button class="main" onclick="loginUser()">लॉगिन करें</button>
+    </div>
+
+    <div class="msg" id="msg"></div>
+</div>
+
+<script>
+let msg=document.getElementById("msg");
+
+function showRegister(){
+    regBtn.classList.add("active");
+    logBtn.classList.remove("active");
+    registerForm.style.display="block";
+    loginForm.style.display="none";
+    msg.style.display="none";
+}
+function showLogin(){
+    logBtn.classList.add("active");
+    regBtn.classList.remove("active");
+    loginForm.style.display="block";
+    registerForm.style.display="none";
+    msg.style.display="none";
+}
+
+function showMsg(t,c="red"){
+    msg.style.display="block";
+    msg.style.color=c;
+    msg.innerText=t;
+}
+
+function registerUser(){
+    let name = document.getElementById("name").value.trim();
+    let aad = document.getElementById("aadhaar").value.trim();
+    let mob = document.getElementById("mobile").value.trim();
+    let pass = document.getElementById("password").value.trim();
+    let referredBy = document.getElementById("referral").value.trim();
+
+    if(!name){ showMsg("Name is mandatory"); return; }
+    if(!/^\d{12}$/.test(aad)){ showMsg("Aadhaar must be 12 digits"); return; }
+    if(!/^\d{10}$/.test(mob)){ showMsg("Mobile number must be 10 digits"); return; }
+    if(pass.length < 6){ showMsg("Password must be at least 6 chars"); return; }
+
+    // create Firebase Auth account
+    auth.createUserWithEmailAndPassword(
+        aad + "@betikalyan.com",
+        pass
+    )
+    .then(() => {
+        let ownReferral = Math.floor(100000 + Math.random() * 900000).toString();
+        let date = new Date().toLocaleDateString();
+
+        return db.collection("users").doc(aad).set({
+            name: name,
+            aadhaar: aad,
+            mobile: mob,
+            ownReferral: ownReferral,
+            referredBy: referredBy || "",
+            registrationDate: date,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    })
+    .then(() => {
+        showMsg("Registration successful! Now you can login.", "green");
+        setTimeout(() => { showLogin(); }, 1200);
+    })
+    .catch(error => {
+        showMsg(error.message);
+    });
+}
+
+function loginUser(){
+    let aadhaar = document.getElementById("loginUser").value.trim();
+    let pass = document.getElementById("loginPass").value.trim();
+
+    if(!/^\d{12}$/.test(aadhaar)){
+        showMsg("Invalid Aadhaar number");
+        return;
+    }
+
+    auth.signInWithEmailAndPassword(aadhaar + "@betikalyan.com", pass)
+    .then(() => {
+        const ADMIN_AADHAAR = "999999999999"; // Admin Aadhaar (never expose)
+        if(aadhaar === ADMIN_AADHAAR){
+            localStorage.setItem("adminUser", "true"); // store flag only
+            window.location.href = "admin.html";
+        } else {
+            localStorage.setItem("loggedUser", aadhaar);
+            window.location.href = "profile.html";
+        }
+    })
+    .catch(err => {
+        showMsg("Invalid Aadhaar or password");
+    });
+}
+
+// show register form by default
+showRegister();
+</script>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAPSLZU2rGmBTjugMGXzLHpznOaRUW3i4k",
+  authDomain: "betikalyanyojnaind.firebaseapp.com",
+  projectId: "betikalyanyojnaind",
+  storageBucket: "betikalyanyojnaind.firebasestorage.app",
+  messagingSenderId: "646974816722",
+  appId: "1:646974816722:web:6b0c9c8960d1846a8e480b"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+</script>
+
+</body>
+</html>

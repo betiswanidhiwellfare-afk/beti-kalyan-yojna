@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<title>रेफरल डैशबोर्ड</title>
+
+<style>
+/* ===== Global ===== */
+body{
+    margin:0;
+    font-family:"Segoe UI",Tahoma,Arial;
+    background:#f2f4f7;
+    display:flex;
+}
+
+/* ===== Sidebar ===== */
+.sidebar{
+    position:fixed;
+    top:0;left:0;
+    width:230px;height:100%;
+    background:#e8f1f8;
+    border-right:1px solid #c3d4e6;
+}
+.sidebar::before{
+    content:"Government Services";
+    display:block;
+    background:#003366;
+    color:#fff;
+    padding:14px 16px;
+    font-weight:600;
+}
+.sidebar a{
+    display:block;
+    padding:12px 18px;
+    color:#003366;
+    text-decoration:none;
+    border-bottom:1px solid #d5e2ee;
+}
+.sidebar a#logoutSidebar {
+    color: #ff3333;
+    font-weight: 600;
+}
+.sidebar a#logoutSidebar:hover {
+    background: #ffe6e6;
+}
+
+/* ===== Main ===== */
+.main{margin-left:230px;width:100%;padding-bottom:50px;}
+
+/* ===== Header ===== */
+header{
+    background:linear-gradient(90deg,#ff9933,#ffffff,#138808);
+    border-bottom:3px solid #003366;
+    padding:10px 18px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+.profile-wrapper{
+    position:relative;
+}
+.profile-wrapper img{
+    width:38px;height:38px;border-radius:50%;
+    border:2px solid #003366;
+    cursor:pointer;
+}
+#logoutMenu{
+    display:none;
+    position:absolute;
+    right:0;top:50px;
+    background:#fff;
+    border:1px solid #ccc;
+    border-radius:6px;
+    padding:8px;
+    width:100px;
+    text-align:center;
+    box-shadow:0 4px 10px rgba(0,0,0,0.1);
+    cursor:pointer;
+}
+#logoutMenu:hover{ background:#ff3333; color:#fff; }
+
+/* ===== Referral Section ===== */
+.container{
+    max-width:700px;
+    margin:20px auto;
+    background:#fff;
+    border-radius:10px;
+    padding:20px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.15);
+}
+.referral-box{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    background:#f9f9f9;
+    border:1px solid #c3d4e6;
+    padding:12px 18px;
+    border-radius:6px;
+    margin-bottom:20px;
+}
+.referral-box span{
+    font-weight:600;
+    font-size:16px;
+    color:#003366;
+}
+.copy-btn{
+    padding:6px 12px;
+    background:#006600;
+    color:white;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+}
+.copy-btn:hover{background:#005500;}
+.referral-list{
+    margin-top:20px;
+}
+.referral-list h2{
+    color:#003366;
+    font-size:18px;
+    margin-bottom:12px;
+}
+.referral-list ul{
+    list-style:none;
+    padding-left:0;
+}
+.referral-list li{
+    padding:10px 12px;
+    border-bottom:1px solid #c3d4e6;
+    font-size:15px;
+}
+#inactiveMsg{
+    text-align:center;
+    color:#c62828;
+    font-weight:600;
+    margin-top:15px;
+}
+
+/* ===== Footer ===== */
+.gov-footer{
+    background:#003366;
+    color:#fff;
+    text-align:center;
+    padding:20px;
+    font-size:13px;
+    border-top:4px solid #ff9933;
+}
+.gov-footer a{color:#ffcc00;text-decoration:none;}
+</style>
+</head>
+
+<body>
+
+<div class="sidebar">
+    <a href="dashboard.html">डैशबोर्ड</a>
+    <a href="profile.html">आवेदक का विवरण</a>
+    <a href="#">सक्रिय करे</a>
+    <a href="referral.html" style="font-weight:bold;">रेफरल</a>
+    <a href="#">सपोर्ट</a>
+    <a href="#" id="logoutSidebar">लॉग आउट</a>
+</div>
+
+<div class="main">
+<header>
+    <h3>बेटी जीवन कल्याण योजना</h3>
+    <div class="profile-wrapper">
+        <img id="profileImg" src="https://cdn-icons-png.flaticon.com/512/149/149071.png">
+        <div id="logoutMenu">लॉग आउट</div>
+    </div>
+</header>
+
+<div class="container">
+    <div class="referral-box" id="refBox">
+        <span id="refCode">REF-XXXXXX</span>
+        <button class="copy-btn" onclick="copyReferral()">कॉपी करें</button>
+    </div>
+
+    <p id="inactiveMsg">
+        आपका खाता अभी सक्रिय नहीं है।  
+        सत्यापन पूरा होने के बाद रेफरल कोड उपलब्ध होगा।
+    </p>
+
+    <div class="referral-list">
+        <h2>आपके रेफरल्स:</h2>
+        <ul id="referralsUl">
+            <li>खाता सक्रिय होने के बाद रेफरल दिखेंगे</li>
+        </ul>
+    </div>
+</div>
+
+<footer class="gov-footer">
+    <p>सहायता ईमेल : <a href="#">helpdesk@betijivankalyan.gov.in</a></p>
+    <p>© 2026 सभी अधिकार सुरक्षित</p>
+</footer>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAPSLZU2rGmBTjugMGXzLHpznOaRUW3i4k",
+  authDomain: "betikalyanyojnaind.firebaseapp.com",
+  projectId: "betikalyanyojnaind",
+  storageBucket: "betikalyanyojnaind.firebasestorage.app",
+  messagingSenderId: "646974816722",
+  appId: "1:646974816722:web:6b0c9c8960d1846a8e480b"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// Check if user is logged in
+auth.onAuthStateChanged(user => {
+    if(!user){
+        alert("कृपया पहले लॉगिन करें");
+        window.location.href = "login.html";
+        return;
+    }
+    const aadhaar = user.email.split("@")[0];
+    loadReferralData(aadhaar);
+});
+
+// Load referral data
+function loadReferralData(aadhaar){
+    db.collection("users").doc(aadhaar).get().then(doc => {
+        if(!doc.exists){
+            refBox.style.display = "none";
+            inactiveMsg.style.display = "block";
+            return;
+        }
+
+        const userData = doc.data();
+        if(userData.status !== "Activated"){
+            refBox.style.display = "none";
+            inactiveMsg.style.display = "block";
+            return;
+        }
+
+        refBox.style.display = "flex";
+        inactiveMsg.style.display = "none";
+
+        let refCode = userData.ownReferral;
+        document.getElementById("refCode").innerText = refCode;
+
+        db.collection("users").where("referredBy", "==", refCode).get().then(snapshot => {
+            if(snapshot.empty){
+                referralsUl.innerHTML = "<li>अभी तक कोई रेफरल नहीं है</li>";
+                return;
+            }
+
+            let referralList = [];
+            snapshot.forEach(refDoc => {
+                const ref = refDoc.data();
+                const status = ref.status === "Activated" 
+                    ? `<span class="status-active">Activated</span>`
+                    : `<span class="status-inactive">Not Activated</span>`;
+                referralList.push(`${ref.name} (${ref.aadhaar}) - ${status}`);
+            });
+
+            referralsUl.innerHTML = referralList.map(r => `<li>${r}</li>`).join("");
+        });
+    });
+}
+
+function copyReferral(){
+    const code = document.getElementById("refCode").innerText;
+    navigator.clipboard.writeText(code)
+        .then(() => alert("रेफरल कोड कॉपी हो गया है"));
+}
+
+// Sidebar logout
+document.getElementById("logoutSidebar").addEventListener("click", function(e){
+    e.preventDefault();
+    auth.signOut().then(()=> window.location.href="login.html");
+});
+
+// Profile image logout
+const profileImg = document.getElementById("profileImg");
+const logoutMenu = document.getElementById("logoutMenu");
+profileImg.addEventListener("click", ()=> logoutMenu.style.display = logoutMenu.style.display === "block" ? "none" : "block");
+logoutMenu.addEventListener("click", ()=> auth.signOut().then(()=> window.location.href="login.html"));
+document.addEventListener("click", e => {
+    if(!profileImg.contains(e.target) && !logoutMenu.contains(e.target)){
+        logoutMenu.style.display = "none";
+    }
+});
+</script>
+
+</body>
+</html>

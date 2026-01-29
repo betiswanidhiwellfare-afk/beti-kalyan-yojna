@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<title>बाल जीवन कल्याण योजना</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+/* ❌ UI NOT TOUCHED */
+*{margin:0;padding:0;box-sizing:border-box;font-family:"Noto Sans Devanagari","Mangal","Segoe UI",Arial,sans-serif;}
+body{background:#f3f6f9;}
+.flag-strip{height:60px;background:linear-gradient(to bottom,#ff9933 0%,#ff9933 33%,#ffffff 33%,#ffffff 66%,#138808 66%,#138808 100%);display:flex;align-items:center;justify-content:center;border-bottom:2px solid #ccc;}
+.flag-strip img{height:42px;background:#fff;border-radius:50%;padding:4px;}
+.header-title{background:#0b5394;color:#fff;padding:12px;text-align:center;font-size:20px;font-weight:600;}
+.container{max-width:460px;margin:30px auto;background:#fff;border:1px solid #cfd8e3;border-radius:6px;box-shadow:0 6px 15px rgba(0,0,0,0.1);}
+.container h2{text-align:center;padding:15px;color:#0b5394;border-bottom:1px solid #ddd;}
+.pay-amount{text-align:center;font-size:18px;font-weight:700;color:#b71c1c;padding:10px;background:#fff3f3;border-bottom:1px solid #f0caca;}
+.section{padding:15px;border-bottom:1px solid #eee;}
+.section h3{font-size:16px;color:#333;margin-bottom:8px;}
+.detail{font-size:14px;margin:5px 0;}
+.detail span{font-weight:600;}
+.qr{text-align:center;margin-top:10px;}
+.qr img{width:170px;border:1px solid #ccc;padding:5px;}
+form{padding:15px;}
+label{font-size:14px;margin-top:10px;display:block;}
+input{width:100%;padding:8px;margin-top:5px;border:1px solid #b0bec5;border-radius:4px;}
+button{width:100%;margin-top:15px;padding:10px;background:#0b5394;border:none;color:#fff;font-size:15px;border-radius:4px;cursor:pointer;}
+button:hover{background:#083b6f;}
+.note{font-size:12px;color:#555;text-align:center;padding:10px;background:#f5f7fa;border-top:1px solid #ddd;}
+.status{text-align:center;font-size:14px;font-weight:600;padding:10px;}
+.pending{color:#c62828;}
+.activated{color:#2e7d32;}
+</style>
+</head>
+
+<body>
+
+<div class="flag-strip">
+<img src="https://upload.wikimedia.org/wikipedia/commons/1/17/Ashoka_Chakra.svg">
+</div>
+
+<div class="header-title">बाल जीवन कल्याण योजना</div>
+
+<div class="container">
+<h2>खाता सक्रियण भुगतान</h2>
+
+<div class="pay-amount">खाता सक्रियण हेतु ₹600 भुगतान करें</div>
+
+<div class="section">
+<h3>आधिकारिक भुगतान विवरण</h3>
+<div class="detail">बैंक का नाम: <span>स्टेट बैंक ऑफ इंडिया</span></div>
+<div class="detail">खाता संख्या: <span>123456789012</span></div>
+<div class="detail">IFSC कोड: <span>SBIN0001234</span></div>
+<div class="detail">UPI आईडी: <span>example@upi</span></div>
+<div class="qr">
+<p style="font-size:13px;margin-bottom:6px;">QR कोड स्कैन कर भुगतान करें</p>
+<img src="qr.png">
+</div>
+</div>
+
+<form id="activationForm">
+<label>लेन-देन / UTR नंबर</label>
+<input type="text" id="utr" required>
+
+<label>भुगतान का स्क्रीनशॉट अपलोड करें</label>
+<input type="file" id="screenshot" accept="image/*" required>
+
+<button type="submit">सत्यापन हेतु जमा करें</button>
+</form>
+
+<div id="statusBox" class="status"></div>
+<div class="note">भुगतान सत्यापन के उपरांत खाता सक्रिय किया जाएगा।</div>
+</div>
+
+<!-- 🔥 Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+// 🔐 login check
+const loggedUser = localStorage.getItem("loggedUser");
+if(!loggedUser){
+    alert("कृपया पहले लॉगिन करें");
+    window.location.href="index.html";
+}
+
+// 🔥 Firebase config (same as admin)
+firebase.initializeApp({
+  apiKey: "AIzaSyAPSLZU2rGmBTjugMGXzLHpznOaRUW3i4k",
+  authDomain: "betikalyanyojnaind.firebaseapp.com",
+  projectId: "betikalyanyojnaind",
+  storageBucket: "betikalyanyojnaind.firebasestorage.app",
+  messagingSenderId: "646974816722",
+  appId: "1:646974816722:web:6b0c9c8960d1846a8e480b"
+});
+
+const db = firebase.firestore();
+const statusBox = document.getElementById("statusBox");
+
+// 🔎 real-time status listener
+db.collection("payments").where("aadhaar","==",loggedUser)
+.onSnapshot(snapshot=>{
+    snapshot.forEach(doc=>{
+        const s = doc.data().status;
+        showStatus(s);
+    });
+});
+
+// 📤 submit payment
+document.getElementById("activationForm").addEventListener("submit", e=>{
+    e.preventDefault();
+
+    const utr = document.getElementById("utr").value;
+    const file = document.getElementById("screenshot").files[0];
+
+    const reader = new FileReader();
+    reader.onload = ()=>{
+        db.collection("payments").add({
+            aadhaar: loggedUser,
+            utr: utr,
+            screenshot: reader.result,
+            status: "Pending",
+            date: new Date()
+        }).then(()=>{
+            alert("भुगतान विवरण सफलतापूर्वक जमा हुआ");
+            showStatus("Pending");
+            e.target.reset();
+        });
+    };
+    reader.readAsDataURL(file);
+});
+
+// 📌 status UI
+function showStatus(status){
+    statusBox.innerText = "वर्तमान स्थिति: " + status;
+    statusBox.className = "status " + (status==="Activated"?"activated":"pending");
+}
+</script>
+
+</body>
+</html>
