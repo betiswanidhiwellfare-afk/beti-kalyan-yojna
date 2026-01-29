@@ -111,6 +111,7 @@ function registerUser(){
             mobile: mob,
             ownReferral: ownReferral,
             referredBy: referredBy || "",
+            status: "Pending",
             registrationDate: date,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });

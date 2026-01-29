@@ -154,8 +154,8 @@ header{
 <div class="sidebar">
     <a href="dashboard.html">डैशबोर्ड</a>
     <a href="profile.html">आवेदक का विवरण</a>
-    <a href="#">सक्रिय करे</a>
-    <a href="referral.html" style="font-weight:bold;">रेफरल</a>
+    <a href="activation.html">सक्रिय करे</a>
+    <a href="refferal.html" style="font-weight:bold;">रेफरल</a>
     <a href="#">सपोर्ट</a>
     <a href="#" id="logoutSidebar">लॉग आउट</a>
 </div>
@@ -170,7 +170,7 @@ header{
 </header>
 
 <div class="container">
-    <div class="referral-box" id="refBox">
+    <div class="referral-box" id="refBox" style="display:none">
         <span id="refCode">REF-XXXXXX</span>
         <button class="copy-btn" onclick="copyReferral()">कॉपी करें</button>
     </div>
@@ -183,15 +183,12 @@ header{
     <div class="referral-list">
         <h2>आपके रेफरल्स:</h2>
         <ul id="referralsUl">
-            <li>खाता सक्रिय होने के बाद रेफरल दिखेंगे</li>
+            <li>लोड हो रहा है...</li>
         </ul>
     </div>
 </div>
+</div>
 
-<footer class="gov-footer">
-    <p>सहायता ईमेल : <a href="#">helpdesk@betijivankalyan.gov.in</a></p>
-    <p>© 2026 सभी अधिकार सुरक्षित</p>
-</footer>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -210,82 +207,74 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Check if user is logged in
-auth.onAuthStateChanged(user => {
+// 🔐 AUTH CHECK
+auth.onAuthStateChanged(user=>{
     if(!user){
-        alert("कृपया पहले लॉगिन करें");
-        window.location.href = "login.html";
+        window.location.href="index.html";
         return;
     }
     const aadhaar = user.email.split("@")[0];
     loadReferralData(aadhaar);
 });
 
-// Load referral data
 function loadReferralData(aadhaar){
-    db.collection("users").doc(aadhaar).get().then(doc => {
-        if(!doc.exists){
-            refBox.style.display = "none";
-            inactiveMsg.style.display = "block";
+    db.collection("users").doc(aadhaar).get().then(doc=>{
+        if(!doc.exists) return;
+
+        const user = doc.data();
+
+        // 🔒 NOT ACTIVATED
+        if(!user.activated){
+            refBox.style.display="none";
+            inactiveMsg.style.display="block";
+            referralsUl.innerHTML="<li>खाता सक्रिय होने के बाद रेफरल दिखेंगे</li>";
             return;
         }
 
-        const userData = doc.data();
-        if(userData.status !== "Activated"){
-            refBox.style.display = "none";
-            inactiveMsg.style.display = "block";
-            return;
-        }
+        // ✅ ACTIVATED
+        refBox.style.display="flex";
+        inactiveMsg.style.display="none";
+        refCode.innerText = user.ownReferral;
 
-        refBox.style.display = "flex";
-        inactiveMsg.style.display = "none";
-
-        let refCode = userData.ownReferral;
-        document.getElementById("refCode").innerText = refCode;
-
-        db.collection("users").where("referredBy", "==", refCode).get().then(snapshot => {
+        // 🔁 LOAD ONLY MY REFERRALS
+        db.collection("users")
+        .where("referredBy","==",user.ownReferral)
+        .get()
+        .then(snapshot=>{
             if(snapshot.empty){
-                referralsUl.innerHTML = "<li>अभी तक कोई रेफरल नहीं है</li>";
+                referralsUl.innerHTML="<li>अभी तक कोई रेफरल नहीं है</li>";
                 return;
             }
 
-            let referralList = [];
-            snapshot.forEach(refDoc => {
-                const ref = refDoc.data();
-                const status = ref.status === "Activated" 
-                    ? `<span class="status-active">Activated</span>`
-                    : `<span class="status-inactive">Not Activated</span>`;
-                referralList.push(`${ref.name} (${ref.aadhaar}) - ${status}`);
+            let html="";
+            snapshot.forEach(d=>{
+                const r=d.data();
+                html+=`<li>
+                    ${r.name} (${r.aadhaar}) –
+                    <strong>${r.activated ? "Activated" : "Pending"}</strong>
+                </li>`;
             });
-
-            referralsUl.innerHTML = referralList.map(r => `<li>${r}</li>`).join("");
+            referralsUl.innerHTML=html;
         });
     });
 }
 
 function copyReferral(){
-    const code = document.getElementById("refCode").innerText;
-    navigator.clipboard.writeText(code)
-        .then(() => alert("रेफरल कोड कॉपी हो गया है"));
+    navigator.clipboard.writeText(refCode.innerText)
+    .then(()=>alert("रेफरल कोड कॉपी हो गया है"));
 }
 
-// Sidebar logout
-document.getElementById("logoutSidebar").addEventListener("click", function(e){
+// LOGOUT
+document.getElementById("logoutSidebar").onclick=e=>{
     e.preventDefault();
-    auth.signOut().then(()=> window.location.href="login.html");
-});
-
-// Profile image logout
-const profileImg = document.getElementById("profileImg");
-const logoutMenu = document.getElementById("logoutMenu");
-profileImg.addEventListener("click", ()=> logoutMenu.style.display = logoutMenu.style.display === "block" ? "none" : "block");
-logoutMenu.addEventListener("click", ()=> auth.signOut().then(()=> window.location.href="login.html"));
-document.addEventListener("click", e => {
-    if(!profileImg.contains(e.target) && !logoutMenu.contains(e.target)){
-        logoutMenu.style.display = "none";
-    }
-});
+    auth.signOut().then(()=>window.location.href="index.html");
+};
+profileImg.onclick=()=>logoutMenu.style.display=
+    logoutMenu.style.display==="block"?"none":"block";
+logoutMenu.onclick=()=>auth.signOut().then(()=>window.location.href="index.html");
 </script>
 
+
+</footer>
 </body>
 </html>

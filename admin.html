@@ -74,19 +74,19 @@ if(!isAdmin || isAdmin !== "true"){
     window.location.href = "index.html";
 }
 
-// Logout button
+// Logout
 document.getElementById("logoutBtn").addEventListener("click",()=>{
     localStorage.removeItem("adminUser");
     alert("आप लॉगआउट हो गए हैं");
     window.location.href = "index.html";
 });
 
-// DOM
 const paymentList = document.getElementById("paymentList");
 
-// Listen real-time for all payments
+// 🔄 REALTIME PAYMENTS
 db.collection("payments").orderBy("date","asc").onSnapshot(snapshot=>{
     paymentList.innerHTML = "";
+
     if(snapshot.empty){
         paymentList.innerHTML = `<tr><td colspan="6">कोई भुगतान अनुरोध नहीं</td></tr>`;
         return;
@@ -103,31 +103,51 @@ db.collection("payments").orderBy("date","asc").onSnapshot(snapshot=>{
             <td><a href="${data.screenshot}" target="_blank">देखें</a></td>
             <td class="status ${data.status.toLowerCase()}">${data.status}</td>
             <td>
-                ${data.status==="Pending"?`<button class="approve-btn" data-id="${doc.id}">Approve</button>`:"—"}
+                ${data.status==="Pending"
+                    ? `<button class="approve-btn" data-id="${doc.id}">Approve</button>`
+                    : "—"}
             </td>
         `;
         paymentList.appendChild(tr);
     });
 
-    // Approve buttons with instant update
+    // ✅ APPROVE LOGIC
     document.querySelectorAll(".approve-btn").forEach(btn=>{
         btn.addEventListener("click", ()=>{
             const id = btn.getAttribute("data-id");
+
             if(confirm("क्या आप इस भुगतान को सक्रिय करना चाहते हैं?")){
-                db.collection("payments").doc(id).update({status:"Activated"})
-                .then(()=>{
-                    // Instant UI update
-                    const statusCell = btn.parentElement.previousElementSibling;
-                    statusCell.innerText = "Activated";
-                    statusCell.className = "status activated";
-                    btn.remove();
-                    alert("भुगतान सक्रिय कर दिया गया है");
-                })
-                .catch(err=>console.error(err));
+                db.collection("payments").doc(id).get().then(docSnap=>{
+                    if(!docSnap.exists) return;
+
+                    const data = docSnap.data();
+                    const aadhaar = data.aadhaar;
+
+                    // Activate payment
+                    db.collection("payments").doc(id).update({
+                        status: "Activated",
+                        activatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    })
+                    // Activate user (referral unlock)
+                    .then(()=>{
+                        return db.collection("users").doc(aadhaar).update({
+                            activated: true
+                        });
+                    })
+                    .then(()=>{
+                        const statusCell = btn.parentElement.previousElementSibling;
+                        statusCell.innerText = "Activated";
+                        statusCell.className = "status activated";
+                        btn.remove();
+
+                        alert("भुगतान सक्रिय कर दिया गया है\nरेफरल ID अब उपयोग योग्य है");
+                    });
+                });
             }
         });
     });
-});
+
+}); // ✅ THIS WAS MISSING
 </script>
 
 </body>
