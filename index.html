@@ -111,6 +111,11 @@ function registerUser(){
             mobile: mob,
             ownReferral: ownReferral,
             referredBy: referredBy || "",
+            activated: false,          // ✅ REQUIRED
+            balance: 0,                // ✅ REQUIRED
+            distributionCount: 0,      // ✅ REQUIRED
+
+            joinIndex: Date.now(),     // ✅ SIMPLE & SAFE ORDERING
             status: "Pending",
             registrationDate: date,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()

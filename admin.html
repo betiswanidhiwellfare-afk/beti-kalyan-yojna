@@ -130,24 +130,117 @@ db.collection("payments").orderBy("date","asc").onSnapshot(snapshot=>{
                     })
                     // Activate user (referral unlock)
                     .then(()=>{
-                        return db.collection("users").doc(aadhaar).update({
-                            activated: true
-                        });
-                    })
-                    .then(()=>{
-                        const statusCell = btn.parentElement.previousElementSibling;
-                        statusCell.innerText = "Activated";
-                        statusCell.className = "status activated";
-                        btn.remove();
+    // Activate the user
+   return db.collection("users").doc(aadhaar).update({
+    activated: true,
+    activationTime: firebase.firestore.FieldValue.serverTimestamp()
+});
 
-                        alert("भुगतान सक्रिय कर दिया गया है\nरेफरल ID अब उपयोग योग्य है");
-                    });
+})
+.then(()=>{
+    // 🔎 Check if this user was referred
+    return db.collection("users").doc(aadhaar).get();
+})
+.then(userDoc=>{
+    if(!userDoc.exists) return;
+
+    const userData = userDoc.data();
+    if(userData.activationProcessed) return;
+
+    const referredBy = userData.referredBy;
+
+    // ❌ No referral OR reward already given → stop
+    if(!referredBy || userData.referralRewardGiven) return;
+
+    // 🔍 Find referrer by referral code
+    return db.collection("users")
+        .where("ownReferral","==",referredBy)
+        .get()
+        .then(snapshot=>{
+            if(snapshot.empty) return;
+
+            snapshot.forEach(refDoc=>{
+                const refId = refDoc.id;
+               db.collection("users").doc(refId).update({
+    balance: firebase.firestore.FieldValue.increment(150)
+});
+
+            });
+
+            // ✅ Mark THIS USER as reward processed
+            return db.collection("users").doc(userDoc.id).update({
+                referralRewardGiven: true
+            });
+        });
+})
+
+                 .then(async ()=>{
+    // 🔥 DISTRIBUTE ₹450 HERE
+    await distribute450();
+
+    // 🔒 LOCK THIS USER FOREVER
+    await db.collection("users").doc(aadhaar).update({
+        activationProcessed: true
+    });
+
+    const statusCell = btn.parentElement.previousElementSibling;
+    statusCell.innerText = "Activated";
+    statusCell.className = "status activated";
+    btn.remove();
+
+    alert("भुगतान सक्रिय कर दिया गया है\n₹600 सफलतापूर्वक वितरित किए गए");
+});
+
                 });
             }
         });
     });
 
 }); // ✅ THIS WAS MISSING
+async function distribute450(){
+    const usersSnap = await db.collection("users")
+    .where("activated","==",true)
+.orderBy("activationTime")
+
+    .get();
+
+    if(usersSnap.empty) return;
+
+    const users = usersSnap.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+    }));
+
+    const pointerRef = db.collection("system").doc("distribution");
+    const pointerSnap = await pointerRef.get();
+
+    let pointer = pointerSnap.exists ? pointerSnap.data().pointer : 0;
+    let given = 0;
+    let i = pointer;
+
+    while(given < 30){
+        const u = users[i % users.length];
+
+        if((u.distributionCount || 0) >= 1000){
+            i++;
+            continue;
+        }
+
+        await db.collection("users").doc(u.id).update({
+            balance: firebase.firestore.FieldValue.increment(15),
+            distributionCount: firebase.firestore.FieldValue.increment(1)
+        });
+
+        given++;
+        i++;
+    }
+
+    await pointerRef.set({
+        pointer: i % users.length
+    });
+}
+
+
 </script>
 
 </body>

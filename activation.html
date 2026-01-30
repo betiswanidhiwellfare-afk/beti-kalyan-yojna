@@ -74,15 +74,12 @@ button:hover{background:#083b6f;}
 
 <!-- 🔥 Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
+
 <script>
-// 🔐 login check
-const loggedUser = localStorage.getItem("loggedUser");
-if(!loggedUser){
-    alert("कृपया पहले लॉगिन करें");
-    window.location.href="index.html";
-}
+
 
 // 🔥 Firebase config (same as admin)
 firebase.initializeApp({
@@ -98,37 +95,71 @@ const db = firebase.firestore();
 const statusBox = document.getElementById("statusBox");
 
 // 🔎 real-time status listener
-db.collection("payments").where("aadhaar","==",loggedUser)
-.onSnapshot(snapshot=>{
-    snapshot.forEach(doc=>{
-        const s = doc.data().status;
-        showStatus(s);
+firebase.auth().onAuthStateChanged(user=>{
+    if(!user) return;
+
+    const aadhaar = user.email.split("@")[0];
+    db.collection("payments").where("aadhaar","==",aadhaar)
+    .onSnapshot(snapshot=>{
+        snapshot.forEach(doc=>{
+            showStatus(doc.data().status);
+        });
     });
 });
 
+
+
 // 📤 submit payment
-document.getElementById("activationForm").addEventListener("submit", e=>{
-    e.preventDefault();
 
-    const utr = document.getElementById("utr").value;
-    const file = document.getElementById("screenshot").files[0];
+firebase.auth().onAuthStateChanged(user=>{
+    if(!user){
+        window.location.href="index.html";
+        return;
+    }
 
-    const reader = new FileReader();
-    reader.onload = ()=>{
-        db.collection("payments").add({
-            aadhaar: loggedUser,
-            utr: utr,
-            screenshot: reader.result,
-            status: "Pending",
-            date: new Date()
-        }).then(()=>{
-            alert("भुगतान विवरण सफलतापूर्वक जमा हुआ");
-            showStatus("Pending");
-            e.target.reset();
+    const aadhaar = user.email.split("@")[0];
+
+    document.getElementById("activationForm").addEventListener("submit", e=>{
+        e.preventDefault();
+
+        const utr = document.getElementById("utr").value;
+        const file = document.getElementById("screenshot").files[0];
+
+        db.collection("payments")
+        .where("aadhaar","==",aadhaar)
+        .where("status","in",["Pending","Activated"])
+        .get()
+        .then(snap=>{
+            if(!snap.empty){
+                alert("आप पहले ही भुगतान जमा कर चुके हैं");
+                return;
+            }
+
+            return db.collection("users").doc(aadhaar).get();
+        })
+        .then(userDoc=>{
+            if(!userDoc || !userDoc.exists) return;
+
+            const reader = new FileReader();
+            reader.onload = ()=>{
+                db.collection("payments").add({
+                    aadhaar: aadhaar,
+                    username: userDoc.data().name,
+                    utr: utr,
+                    screenshot: reader.result,
+                    status: "Pending",
+                    date: firebase.firestore.FieldValue.serverTimestamp()
+                }).then(()=>{
+                    alert("भुगतान विवरण सफलतापूर्वक जमा हुआ");
+                    showStatus("Pending");
+                    e.target.reset();
+                });
+            };
+            reader.readAsDataURL(file);
         });
-    };
-    reader.readAsDataURL(file);
+    });
 });
+
 
 // 📌 status UI
 function showStatus(status){

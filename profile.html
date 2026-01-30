@@ -124,6 +124,13 @@ header{
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>firebase.auth().onAuthStateChanged(user => {
+    if(!user){
+        window.location.href = "index.html";
+    }
+});
+</script>
+
 
 <script>
 const firebaseConfig = {
@@ -146,13 +153,17 @@ auth.onAuthStateChanged(user => {
     } else {
         // Logged in → load user data
         const aadhaar = user.email.split("@")[0]; // extract Aadhaar
-        db.collection("users").doc(aadhaar).get().then(doc => {
-            if(doc.exists){
-                document.querySelector('input[placeholder="Applicant Name"]').value = doc.data().name;
-                document.querySelector('input[placeholder="Aadhaar Number"]').value = doc.data().aadhaar;
-                document.querySelector('input[placeholder="₹0"]').value = "₹" + (doc.data().amountReceived || 0);
-            }
-        });
+      db.collection("users").doc(aadhaar)
+.onSnapshot(doc => {
+    if(doc.exists){
+        const data = doc.data();
+
+        document.querySelector('input[placeholder="Applicant Name"]').value = data.name;
+        document.querySelector('input[placeholder="Aadhaar Number"]').value = data.aadhaar;
+        document.querySelector('input[placeholder="₹0"]').value =
+            "₹" + (data.balance || 0);
+    }
+});
     }
 });
 </script>
