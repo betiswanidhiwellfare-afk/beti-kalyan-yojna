@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<title>Customer Support | लाभार्थी सहायता केंद्र</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:"Noto Sans Devanagari","Mangal",Arial,sans-serif;
+}
+
+body{
+    background:#f4f6f9;
+}
+
+/* ===== HEADER ===== */
+.header{
+    background:linear-gradient(to right,#ff9933,#ffffff,#138808);
+    padding:15px;
+    border-bottom:4px solid #0b5ed7;
+    text-align:center;
+}
+
+.header h1{
+    font-size:28px;
+    font-weight:800;
+}
+
+.header p{
+    font-size:14px;
+}
+
+/* ===== SUPPORT BOX ===== */
+.support-container{
+    max-width:800px;
+    margin:30px auto;
+    background:#ffffff;
+    padding:25px;
+    border-radius:12px;
+    box-shadow:0 5px 20px rgba(0,0,0,0.15);
+}
+
+.support-container h2{
+    text-align:center;
+    color:#0b5ed7;
+    margin-bottom:20px;
+    border-bottom:2px solid #0b5ed7;
+    padding-bottom:10px;
+}
+
+/* ===== EMAIL ===== */
+.support-email{
+    background:#e7f1ff;
+    border-left:6px solid #0b5ed7;
+    padding:15px;
+    font-size:18px;
+    margin-bottom:20px;
+}
+
+.support-email span{
+    font-weight:700;
+    color:#000;
+}
+
+/* ===== FORM ===== */
+.form-group{
+    margin-bottom:15px;
+}
+
+label{
+    font-weight:700;
+    display:block;
+    margin-bottom:6px;
+}
+
+input, textarea{
+    width:100%;
+    padding:12px;
+    border:2px solid #0b5ed7;
+    border-radius:6px;
+    font-size:16px;
+}
+
+textarea{
+    height:150px;
+    resize:none;
+}
+
+/* ===== BUTTON ===== */
+button{
+    width:100%;
+    padding:14px;
+    background:#0b5ed7;
+    color:#ffffff;
+    font-size:18px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    font-weight:700;
+}
+
+button:hover{
+    background:#084298;
+}
+
+/* ===== FOOTER ===== */
+.footer{
+    text-align:center;
+    margin-top:25px;
+    font-size:13px;
+    color:#555;
+}
+</style>
+</head>
+
+<body>
+
+<!-- HEADER -->
+<div class="header">
+    <h1>Customer Support Center</h1>
+    <p> योजना सहायता पोर्टल</p>
+</div>
+
+<!-- SUPPORT PAGE -->
+<div class="support-container">
+
+    <h2>सहायता एवं शिकायत दर्ज करें</h2>
+
+    <!-- SUPPORT EMAIL -->
+    <div class="support-email">
+        सहायता हेतु ई-मेल करें :  
+        <span>support@govscheme.in</span>
+    </div>
+
+    <!-- SUPPORT FORM -->
+    <form>
+        <div class="form-group">
+            <label>आपका नाम</label>
+            <input type="text" placeholder="पूरा नाम दर्ज करें">
+        </div>
+
+        <div class="form-group">
+            <label>मोबाइल नंबर</label>
+            <input type="text" placeholder="10 अंकों का मोबाइल नंबर">
+        </div>
+
+        <div class="form-group">
+            <label>अपनी समस्या / Query लिखें</label>
+            <textarea placeholder="यहाँ अपनी पूरी समस्या लिखें..."></textarea>
+        </div>
+
+        <button type="submit">Submit Query</button>
+    </form>
+
+    <div class="footer">
+        आपकी शिकायत सीधे योजना अधिकृत  तक भेजी जाएगी
+    </div>
+
+</div>
+
+</body>
+</html>

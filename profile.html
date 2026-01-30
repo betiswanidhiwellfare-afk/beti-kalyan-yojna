@@ -160,8 +160,34 @@ auth.onAuthStateChanged(user => {
 
         document.querySelector('input[placeholder="Applicant Name"]').value = data.name;
         document.querySelector('input[placeholder="Aadhaar Number"]').value = data.aadhaar;
-        document.querySelector('input[placeholder="₹0"]').value =
-            "₹" + (data.balance || 0);
+        document.getElementById("receivedAmount").value =
+    "₹" + (data.balance || 0);
+    // 🔹 Check latest pending withdraw
+db.collection("withdrawRequests")
+  .where("userId", "==", aadhaar)
+
+  .where("status", "==", "Pending")
+  .orderBy("requestedAt", "desc")
+  .limit(1)
+.onSnapshot(snapshot => {
+    const transferInput = document.getElementById("withdrawAmount");
+    const transferBtn = document.querySelector(".transfer-btn");
+
+    if(snapshot.empty){
+        document.getElementById("transferStatus").value = "—";
+        transferInput.disabled = false;   // allow new request
+        transferBtn.disabled = false;     // enable button
+    } else {
+        const latest = snapshot.docs[0].data();
+        document.getElementById("transferStatus").value = "Pending: ₹" + latest.amount;
+        transferInput.disabled = true;    // block new request
+        transferBtn.disabled = true;      // disable button
+    }
+});
+
+
+
+
     }
 });
     }
@@ -170,17 +196,17 @@ auth.onAuthStateChanged(user => {
 
 
 <div class="sidebar">
-    <a href="#">डैशबोर्ड</a>
-    <a href="#">आवेदक का विवरण</a>
+    <a href="profile.html">डैशबोर्ड</a>
+    <a href="user details.html">आवेदक का विवरण</a>
     <a href="activation.html">सक्रिय करे</a>
     <a href="refferal.html">रेफरल</a>
-    <a href="#">सपोर्ट</a>
+    <a href="support.html">सपोर्ट</a>
     <a href="#" id="logoutSidebar">लॉग आउट</a>
 </div>
 
 <div class="main">
 <header>
-    <h3>बेटी जीवन कल्याण योजना</h3>
+    <h3> कल्याण योजना</h3>
     <div class="profile-wrapper">
         <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png">
     </div>
@@ -203,14 +229,25 @@ auth.onAuthStateChanged(user => {
         </div>
         <div class="detail-box">
             <span>प्राप्त सहयोग राशि</span>
-            <input type="text" placeholder="₹0" readonly>
+            <input type="text" id="receivedAmount" placeholder="0" readonly>
         </div>
-        <div class="detail-box">
-            <span>ट्रांसफर राशि</span>
-            <input type="text" placeholder="राशि दर्ज करें">
-            <button class="transfer-btn">ट्रांसफर करें</button>
-        </div>
-    </div>
+    <div class="detail-box">
+    <span>ट्रांसफर राशि</span>
+    <input type="number" id="withdrawAmount" placeholder="राशि दर्ज करें">
+    <button class="transfer-btn" onclick="openWithdrawBar()">ट्रांसफर करें</button>
+</div>
+
+   
+</div>
+
+
+
+
+
+</div>
+
+
+
     <script>
 // Logout from sidebar
 document.getElementById("logoutSidebar").addEventListener("click", function(e){
@@ -219,6 +256,70 @@ document.getElementById("logoutSidebar").addEventListener("click", function(e){
         window.location.href = "index.html";
     });
 });
+// 🔹 Open Withdraw Panel
+function openWithdrawBar() {
+    const userId = firebase.auth().currentUser.email.split("@")[0];
+
+    db.collection("users").doc(userId).get().then(doc => {
+        const data = doc.data();
+
+        document.getElementById("barAcc").innerText  = data.account || "—";
+        document.getElementById("barIfsc").innerText = data.ifsc || "—";
+        document.getElementById("barUpi").innerText  = data.upi || "—";
+
+        document.getElementById("withdrawBar").style.bottom = "0";
+        document.getElementById("wAmount").value = document.getElementById("withdrawAmount").value || "";
+    });
+}
+
+function closeWithdrawBar() {
+    document.getElementById("withdrawBar").style.bottom = "-100%";
+}
+
+
+// 🔹 Submit Withdraw
+function submitWithdrawRequest() {
+    const amount = Number(document.getElementById("wAmount").value);
+    const userId = firebase.auth().currentUser.email.split("@")[0];
+
+    if (!amount || amount <= 0) {
+        alert("कृपया राशि दर्ज करें");
+        return;
+    }
+
+    db.collection("users").doc(userId).get().then(doc => {
+        const data = doc.data();
+        const balance = data.balance || 0;
+
+        if (amount > balance) {
+            alert("ट्रांसफर राशि उपलब्ध राशि से अधिक नहीं हो सकती");
+            return;
+        }
+
+        const method = document.querySelector('input[name="withdrawType"]:checked').value;
+        const details = method === "account"
+            ? { account: data.account, ifsc: data.ifsc }
+            : { upi: data.upi };
+
+        db.collection("withdrawRequests").add({
+            userId,
+            amount,
+            method,
+            details,
+            status: "Pending",
+            requestedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(() => {
+            alert("आपकी राशि के लिए अनुरोध सबमिट हो गया ✅");
+            closeWithdrawBar();
+            document.getElementById("withdrawAmount").value = "";
+        });
+    });
+}
+
+
+       
+
+
 </script>
 
 
@@ -228,6 +329,66 @@ document.getElementById("logoutSidebar").addEventListener("click", function(e){
         <p>© 2026 सभी अधिकार सुरक्षित</p>
     </footer>
 </div>
+</div>
+<!-- Withdraw bar -->
+<div id="withdrawBar" style="
+    position:fixed;
+    bottom:-100%;
+    left:0;
+    width:100%;
+    background:#ffffff;
+    border-top:4px solid #ff9933;
+    box-shadow:0 -4px 12px rgba(0,0,0,0.25);
+    padding:18px;
+    transition:0.4s ease;
+    z-index:9999;
+">
+    <h3 style="margin-top:0;color:#003366;">भुगतान विधि चुनें</h3>
+
+    <label style="display:block;margin-top:10px;">
+        <input type="radio" name="withdrawType" value="account" checked> बैंक खाता
+    </label>
+
+    <div style="margin-left:20px;margin-top:6px;font-size:14px;">
+        <div><b>Account:</b> <span id="barAcc"></span></div>
+        <div><b>IFSC:</b> <span id="barIfsc"></span></div>
+    </div>
+
+    <label style="display:block;margin-top:12px;">
+        <input type="radio" name="withdrawType" value="upi"> UPI ID
+    </label>
+
+    <div style="margin-left:20px;margin-top:6px;font-size:14px;">
+        <div><b>UPI:</b> <span id="barUpi"></span></div>
+    </div>
+
+    <div style="margin-top:10px;">
+        <label>राशि दर्ज करें</label>
+        <input type="number" id="wAmount" placeholder="राशि दर्ज करें" style="width:100%;padding:6px;margin-top:4px;">
+    </div>
+
+    <button onclick="submitWithdrawRequest()" style="
+        margin-top:16px;
+        padding:10px 20px;
+        background:#006600;
+        color:#fff;
+        border:none;
+        border-radius:6px;
+        cursor:pointer;
+        font-size:15px;
+        width:100%;
+    ">सबमिट करें</button>
+
+    <button onclick="closeWithdrawBar()" style="
+        margin-top:10px;
+        padding:8px 16px;
+        background:#555;
+        color:#fff;
+        border:none;
+        border-radius:6px;
+        cursor:pointer;
+        width:100%;
+    ">बंद करें</button>
 </div>
 
 </body>

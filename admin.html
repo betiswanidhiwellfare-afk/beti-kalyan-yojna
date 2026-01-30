@@ -47,6 +47,25 @@ button.approve-btn:hover{background:#1b4d23;}
 </tbody>
 </table>
 </div>
+<div class="container" style="margin-top:40px;">
+<h2>निकासी अनुरोध सूची (Withdraw Requests)</h2>
+<table>
+<thead>
+<tr>
+<th>आवेदक का नाम</th>
+<th>आधार नंबर</th>
+<th>राशि</th>
+<th>भुगतान विधि</th>
+<th>खाता / UPI विवरण</th>
+<th>स्थिति</th>
+<th>कार्रवाई</th>
+</tr>
+</thead>
+<tbody id="withdrawList">
+<tr><td colspan="7">लोड हो रहा है...</td></tr>
+</tbody>
+</table>
+</div>
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -131,10 +150,13 @@ db.collection("payments").orderBy("date","asc").onSnapshot(snapshot=>{
                     // Activate user (referral unlock)
                     .then(()=>{
     // Activate the user
-   return db.collection("users").doc(aadhaar).update({
+   return db.collection("users").doc(aadhaar).set({
     activated: true,
-    activationTime: firebase.firestore.FieldValue.serverTimestamp()
-});
+    activationTime: firebase.firestore.FieldValue.serverTimestamp(),
+    balance: firebase.firestore.FieldValue.increment(0),
+    distributionCount: firebase.firestore.FieldValue.increment(0)
+}, { merge: true });
+
 
 })
 .then(()=>{
@@ -199,10 +221,9 @@ db.collection("payments").orderBy("date","asc").onSnapshot(snapshot=>{
 }); // ✅ THIS WAS MISSING
 async function distribute450(){
     const usersSnap = await db.collection("users")
-    .where("activated","==",true)
-.orderBy("activationTime")
-
-    .get();
+        .where("activated","==",true)
+        .orderBy("activationTime")
+        .get();
 
     if(usersSnap.empty) return;
 
@@ -213,32 +234,107 @@ async function distribute450(){
 
     const pointerRef = db.collection("system").doc("distribution");
     const pointerSnap = await pointerRef.get();
-
     let pointer = pointerSnap.exists ? pointerSnap.data().pointer : 0;
+
     let given = 0;
+    let checked = 0;
     let i = pointer;
 
-    while(given < 30){
+    while(given < 30 && checked < users.length){
         const u = users[i % users.length];
 
-        if((u.distributionCount || 0) >= 1000){
-            i++;
-            continue;
+        if((u.distributionCount || 0) < 1000){
+            await db.collection("users").doc(u.id).update({
+                balance: firebase.firestore.FieldValue.increment(15),
+                distributionCount: firebase.firestore.FieldValue.increment(1)
+            });
+            given++;
         }
 
-        await db.collection("users").doc(u.id).update({
-            balance: firebase.firestore.FieldValue.increment(15),
-            distributionCount: firebase.firestore.FieldValue.increment(1)
-        });
-
-        given++;
         i++;
+        checked++;
     }
 
-    await pointerRef.set({
-        pointer: i % users.length
-    });
+    await pointerRef.set({ pointer: i % users.length });
 }
+
+const withdrawList = document.getElementById("withdrawList");
+
+// 🔄 REALTIME WITHDRAW REQUESTS
+db.collection("withdrawRequests").orderBy("requestedAt","asc").onSnapshot(snapshot=>{
+    withdrawList.innerHTML = "";
+
+    if(snapshot.empty){
+        withdrawList.innerHTML = `<tr><td colspan="7">कोई निकासी अनुरोध नहीं</td></tr>`;
+        return;
+    }
+
+    snapshot.forEach(doc=>{
+        const data = doc.data();
+        const tr = document.createElement("tr");
+
+        const detailsText = data.method==="BANK"
+            ? `A/C: ${data.details.account}, IFSC: ${data.details.ifsc}`
+            : `UPI: ${data.details.upi}`;
+
+        tr.innerHTML = `
+            <td>${data.username}</td>
+            <td>${data.aadhaar}</td>
+            <td>₹${data.amount}</td>
+            <td>${data.method}</td>
+            <td>${detailsText}</td>
+            <td class="status ${data.status.toLowerCase()}">${data.status}</td>
+            <td>
+                ${data.status==="Pending"
+                    ? `<button class="approve-btn" data-id="${doc.id}">Approve</button>`
+                    : "—"}
+            </td>
+        `;
+        withdrawList.appendChild(tr);
+    });
+
+    // ✅ WITHDRAW APPROVE BUTTON
+    document.querySelectorAll("#withdrawList .approve-btn").forEach(btn=>{
+        btn.addEventListener("click", async ()=>{
+            const id = btn.getAttribute("data-id");
+
+            if(!confirm("क्या आप इस निकासी अनुरोध को स्वीकार करना चाहते हैं?")) return;
+
+            const reqDoc = await db.collection("withdrawRequests").doc(id).get();
+            if(!reqDoc.exists) return;
+
+            const reqData = reqDoc.data();
+            const aadhaar = reqData.userId;
+            const amount = reqData.amount;
+
+            // 🔹 Check user balance
+            const userDoc = await db.collection("users").doc(aadhaar).get();
+            if(!userDoc.exists) return;
+
+            const userData = userDoc.data();
+            const balance = userData.balance || 0;
+
+            if(amount > balance){
+                alert("उपयोगकर्ता के खाते में पर्याप्त शेष राशि नहीं है।");
+                return;
+            }
+
+            // 🔹 Deduct amount & mark request as Received
+            await db.collection("users").doc(aadhaar).update({
+                balance: firebase.firestore.FieldValue.increment(-amount)
+            });
+
+            await db.collection("withdrawRequests").doc(id).update({
+                status: "Received",
+                approvedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            alert(`₹${amount} की निकासी सफलतापूर्वक स्वीकृत हुई।`);
+        });
+    });
+});
+
+
 
 
 </script>

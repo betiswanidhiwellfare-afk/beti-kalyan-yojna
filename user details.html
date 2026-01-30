@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<title>बेटी प्रोफाइल विवरण</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:"Noto Sans Devanagari","Mangal",Arial,sans-serif;
+}
+body{ background:#f2f4f7; }
+
+.header{
+    background:linear-gradient(90deg,#ff9933,#ffffff,#138808);
+    text-align:center;
+    padding:15px;
+    border-bottom:3px solid #1a237e;
+}
+
+.header h1{
+    font-size:26px;
+    color:#1a237e;
+    font-weight:700;
+}
+
+.container{
+    width:90%;
+    max-width:900px;
+    margin:25px auto;
+    background:#fff;
+    border-radius:10px;
+    padding:25px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.15);
+}
+
+.section-title{
+    font-size:20px;
+    color:#0d47a1;
+    border-bottom:2px solid #0d47a1;
+    margin-bottom:20px;
+    padding-bottom:5px;
+}
+
+.profile-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+    gap:15px;
+}
+
+.field label{
+    font-weight:600;
+    font-size:14px;
+    color:#333;
+}
+
+.field input{
+    width:100%;
+    padding:10px;
+    border:1px solid #bbb;
+    border-radius:6px;
+    font-size:15px;
+    margin-top:5px;
+    background:#f5f5f5;
+}
+
+.field input:read-only{
+    background:#eee;
+}
+
+.actions{
+    margin-top:20px;
+    text-align:right;
+}
+
+.actions button{
+    padding:6px 14px;
+    font-size:13px;
+    border-radius:14px;
+    border:none;
+    cursor:pointer;
+    margin-left:6px;
+}
+
+.edit-btn{ background:#ff9800; }
+.save-btn{ background:#0d47a1; color:#fff; display:none; }
+.logout-btn{ background:#777; color:#fff; float:left; }
+
+.note{
+    margin-top:15px;
+    font-size:12px;
+    color:#555;
+    text-align:center;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+    <h1>बेटी प्रोफाइल विवरण</h1>
+</div>
+
+<div class="container">
+
+<div class="section-title">व्यक्तिगत एवं बैंक विवरण</div>
+
+<div class="profile-grid">
+    <div class="field"><label>बेटी का नाम</label><input id="f1" readonly></div>
+    <div class="field"><label>पिता का नाम</label><input id="f2" readonly></div>
+    <div class="field"><label>माता का नाम</label><input id="f3" readonly></div>
+    <div class="field"><label>आधार नंबर</label><input id="f4" readonly></div>
+    <div class="field"><label>जन्मतिथि</label><input type="date" id="f5" readonly></div>
+    <div class="field"><label>मोबाइल नंबर</label><input id="f6" readonly></div>
+    <div class="field"><label>खाता संख्या</label><input id="f7" readonly></div>
+    <div class="field"><label>IFSC कोड</label><input id="f8" readonly></div>
+    <div class="field"><label>UPI ID</label><input id="f9" readonly></div>
+</div>
+
+<div class="actions">
+    <button class="logout-btn" onclick="logout()">Logout</button>
+    <button class="edit-btn" onclick="enableEdit()">Correction</button>
+    <button class="save-btn" onclick="saveData()">Save</button>
+</div>
+
+<div class="note">⚠️ विवरण भरने या सुधारने के लिए Correction बटन दबाएँ</div>
+
+</div>
+
+<!-- 🔥 Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+// 🔥 Firebase config
+firebase.initializeApp({
+  apiKey: "AIzaSyAPSLZU2rGmBTjugMGXzLHpznOaRUW3i4k",
+  authDomain: "betikalyanyojnaind.firebaseapp.com",
+  projectId: "betikalyanyojnaind",
+  storageBucket: "betikalyanyojnaind.firebasestorage.app",
+  messagingSenderId: "646974816722",
+  appId: "1:646974816722:web:6b0c9c8960d1846a8e480b"
+});
+
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+// 🔗 Inputs mapping
+const fields = {
+  betiName: document.getElementById("f1"),
+  fatherName: document.getElementById("f2"),
+  motherName: document.getElementById("f3"),
+  aadhaar: document.getElementById("f4"),
+  dob: document.getElementById("f5"),
+  mobile: document.getElementById("f6"),
+  account: document.getElementById("f7"),
+  ifsc: document.getElementById("f8"),
+  upi: document.getElementById("f9")
+};
+
+// 🔐 Auth check + load data
+auth.onAuthStateChanged(user=>{
+    if(!user){
+        window.location.href = "index.html";
+        return;
+    }
+
+    const aadhaarId = user.email.split("@")[0];
+
+    db.collection("users").doc(aadhaarId)
+    .onSnapshot(doc=>{
+        if(doc.exists){
+            const d = doc.data();
+            fields.betiName.value   = d.betiName || "";
+            fields.fatherName.value = d.fatherName || "";
+            fields.motherName.value = d.motherName || "";
+            fields.aadhaar.value    = d.aadhaar || aadhaarId;
+            fields.dob.value        = d.dob || "";
+            fields.mobile.value     = d.mobile || "";
+            fields.account.value    = d.account || "";
+            fields.ifsc.value       = d.ifsc || "";
+            fields.upi.value        = d.upi || "";
+        } else {
+            fields.aadhaar.value = aadhaarId;
+        }
+    });
+});
+
+// ✏️ Enable edit
+function enableEdit(){
+    Object.values(fields).forEach(i => i.removeAttribute("readonly"));
+    document.querySelector(".edit-btn").style.display = "none";
+    document.querySelector(".save-btn").style.display = "inline-block";
+}
+
+// 💾 Save to Firestore
+function saveData(){
+    const user = auth.currentUser;
+    if(!user) return;
+
+    const aadhaarId = user.email.split("@")[0];
+
+    db.collection("users").doc(aadhaarId).set({
+        betiName: fields.betiName.value,
+        fatherName: fields.fatherName.value,
+        motherName: fields.motherName.value,
+        aadhaar: aadhaarId,
+        dob: fields.dob.value,
+        mobile: fields.mobile.value,
+        account: fields.account.value,
+        ifsc: fields.ifsc.value,
+        upi: fields.upi.value,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge:true })
+    .then(()=>{
+        Object.values(fields).forEach(i => i.setAttribute("readonly", true));
+        document.querySelector(".edit-btn").style.display = "inline-block";
+        document.querySelector(".save-btn").style.display = "none";
+        alert("डेटा सुरक्षित हो गया है ✅");
+    });
+}
+
+// 🚪 Logout
+function logout(){
+    auth.signOut().then(()=>{
+        window.location.href = "index.html";
+    });
+}
+</script>
+
+</body>
+</html>
